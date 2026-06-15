@@ -49,7 +49,7 @@ async def place_order(
     return OrderResponse(
         order_id=order_id,
         status=order.status,
-        customer_id=order.status
+        customer_id=order.customer_id
     )
 
 @router.get("/order/{order_id}", response_model=OrderResponse)

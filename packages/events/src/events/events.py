@@ -49,7 +49,7 @@ class PaymentCharged(BaseEvent):
     """Emitted when payment-service successfully authorises payment"""
 
     auth_code: str
-    amount_pence: int
+    amount: int
 
 class PaymentFailed(BaseEvent):
     """Emmited when payment-service declines payment"""

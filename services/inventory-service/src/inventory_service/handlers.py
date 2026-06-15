@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import update
+import broker
 from broker.redis_client import Broker, get_broker
 from db.session import get_engine
 from events.events import OrderInitiated, ReleaseStock, StockReserved, StockUnavailable
