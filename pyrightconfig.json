@@ -1,0 +1,13 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.14",
+  "extraPaths": [
+    "packages/broker/src",
+    "packages/db/src",
+    "packages/events/src",
+    "services/order-service/src",
+    "services/inventory-service/src",
+    "services/payment-service/src"
+  ]
+}
