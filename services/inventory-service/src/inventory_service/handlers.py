@@ -1,11 +1,10 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import update
-import broker
 from broker.redis_client import Broker, get_broker
 from db.session import get_engine
 from events.events import OrderInitiated, ReleaseStock, StockReserved, StockUnavailable
-from inventory_service.models import Reservation, ReservationStatus, Stock
+from inventory_service.models import OutboxMessage, Reservation, ReservationStatus, Stock
 
 
 def register_handlers(broker: Broker) -> None:
@@ -59,8 +58,15 @@ async def _on_order_initiated(event: OrderInitiated) -> None:
                     order_id=event.order_id,
                     reason="stock unavailable"
                 )
- 
-                await get_broker().publish("saga:events", stock_unavailable_event)
+
+                outbox_message = OutboxMessage(
+                    channel="saga:events",
+                    payload=stock_unavailable_event.model_dump_json()
+                )
+                
+                db.add(outbox_message)
+                await db.commit()
+
                 return
 
             stock.available_qnty -= event.quantity
@@ -75,8 +81,7 @@ async def _on_order_initiated(event: OrderInitiated) -> None:
             )
             
             db.add(reservation)
-            await db.commit()
-            
+
             stock_reserved_event = StockReserved(
                 item_id=event.item_id,
                 customer_id=event.customer_id,
@@ -86,11 +91,18 @@ async def _on_order_initiated(event: OrderInitiated) -> None:
                 total_amount=total_price
             )
 
-            await get_broker().publish("saga:events", stock_reserved_event)
+            outbox_message = OutboxMessage(
+                channel="saga:events",
+                payload=stock_reserved_event.model_dump_json()
+            )
+            
+            db.add(outbox_message)
+            await db.commit()
         except Exception as e:
             await db.rollback()
             print(f"Error reserving stocks for {event.order_id}: {e}")
-            
+            async with AsyncSession(engine) as error_session:
+                await _write_outbox_failure(error_session, event.order_id, str(e))
 
 async def _on_release_stock(event: ReleaseStock) -> None:
     engine = get_engine()
@@ -118,4 +130,18 @@ async def _on_release_stock(event: ReleaseStock) -> None:
 
         await db.commit()
         
-        
+async def _write_outbox_failure(db: AsyncSession,
+    order_id: str, reason: str,
+):
+    stock_unavailable_event = StockUnavailable(
+        order_id=order_id,
+        reason=f"stock unavailable for reason {reason}"
+    )
+
+    outbox_message = OutboxMessage(
+        channel="saga:events",
+        payload=stock_unavailable_event.model_dump_json()
+    )
+
+    db.add(outbox_message)
+    await db.commit()

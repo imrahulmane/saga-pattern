@@ -9,6 +9,8 @@ from inventory_service.handlers import register_handlers
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
+from inventory_service.outbox import OutboxProcessor
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async with get_engine().begin() as conn:
@@ -20,9 +22,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     register_handlers(broker)
     await broker.start_listening()
 
+    outbox_processor = OutboxProcessor(broker)
+    await outbox_processor.start()
+
     yield
 
     await broker.disconnect()
+    await outbox_processor.stop()
 
 
 app = FastAPI(title="Inventory Service", lifespan=lifespan)

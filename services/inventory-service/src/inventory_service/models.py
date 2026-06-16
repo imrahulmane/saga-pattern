@@ -1,7 +1,9 @@
+from datetime import datetime
 import enum
+from sqlalchemy.types import DateTime, Integer
 from db.base import Base, TimestampMixin
 from sqlalchemy.orm import mapped_column, Mapped
-from sqlalchemy import Enum, String
+from sqlalchemy import Enum, String, Text
 from sqlalchemy.sql.schema import ForeignKey
 
 class ReservationStatus(str, enum.Enum):
@@ -30,3 +32,16 @@ class Reservation(Base, TimestampMixin):
     )
     unit_price : Mapped[int] = mapped_column()
     total_price: Mapped[int] = mapped_column()
+
+
+class OutboxMessage(Base, TimestampMixin):
+    __tablename__ = "outbox_message"
+    __table_args__ = {"schema": "inventory"}
+
+    id : Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    channel: Mapped[str] = mapped_column(String(50))
+    payload: Mapped[str] = mapped_column(Text)
+    published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
