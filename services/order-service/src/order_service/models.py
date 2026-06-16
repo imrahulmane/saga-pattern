@@ -10,6 +10,10 @@ class SagaStep(enum.IntEnum):
     INVENTORY = 2
     PAYMENT = 3
 
+    @property
+    def name_lower(self) -> str:
+        return self.name.lower()
+
 class OrderStatus(str, enum.Enum):
     PLACED = "placed"
     PENDING = "pending"
@@ -34,8 +38,8 @@ class Order(Base, TimestampMixin):
     customer_id: Mapped[str] = mapped_column(String(20))
     quantity: Mapped[int] = mapped_column()
     card_token: Mapped[str] = mapped_column(String(50))
-    failed_at_step: Mapped[SagaStep | None] = mapped_column(
-        Enum(SagaStep),
+    failed_at_step: Mapped[str | None] = mapped_column(
+        String(20),
         nullable=True
     )
     

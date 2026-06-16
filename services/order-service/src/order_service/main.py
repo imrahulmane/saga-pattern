@@ -3,6 +3,7 @@ from db.base import Base
 from db.session import get_engine
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
+from order_service.handlers import register_handlers
 from order_service.routes import router
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
@@ -15,8 +16,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     broker = get_broker()
     await broker.connect()
+    register_handlers(broker)
 
-    # register handlers
     await broker.start_listening()
 
     yield

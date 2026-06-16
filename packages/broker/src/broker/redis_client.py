@@ -70,7 +70,6 @@ class Broker:
             raise RuntimeError("Broker Not Connected")
 
         if not self._handlers:
-            print("DEBUG start_listening: NO HANDLERS — returning, not subscribing")
             return
 
         await self._pubsub.subscribe(*self._handlers.keys())
@@ -81,7 +80,6 @@ class Broker:
             return
 
         async for message in self._pubsub.listen():
-            print("DEBUG raw msg:", message) 
             if message['type'] != 'message':
                 continue
 
