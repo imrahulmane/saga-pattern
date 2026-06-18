@@ -1,0 +1,84 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: saga
+    ports:
+      - "5432:5432"
+    volumes:
+      - saga-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d saga"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "root"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "root", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  order:
+    build:
+      context: .
+      dockerfile: services/order-service/Dockerfile
+    environment:
+      REDIS_URL: redis://:root@redis:6379
+      DB_URL: postgresql+asyncpg://root:root@db:5432/saga
+    ports:
+      - "8000:8000"
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  inventory:
+    build:
+      context: .
+      dockerfile: services/inventory-service/Dockerfile
+    environment:
+      REDIS_URL: redis://:root@redis:6379
+      DB_URL: postgresql+asyncpg://root:root@db:5432/saga
+    ports:
+      - "8001:8001"
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  payment:
+    build:
+      context: .
+      dockerfile: services/payment-service/Dockerfile
+    environment:
+      REDIS_URL: redis://:root@redis:6379
+      DB_URL: postgresql+asyncpg://root:root@db:5432/saga
+    ports:
+      - "8002:8002"
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: services/dashboard/Dockerfile
+    environment:
+      REDIS_URL: redis://:root@redis:6379
+    ports:
+      - "8003:8003"
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  saga-db-data:
